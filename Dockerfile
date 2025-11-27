@@ -5,4 +5,4 @@ ADD target/timesheet-devops-1.0.jar timesheet-devops-1.0.jar
 
 EXPOSE 8092
 
-ENTRYPOINT ["java", "-jar", "timesheet-devops-1.0.jar"]
+ENTRYPOINT ["java", "-jar", "timeseet-devops-1.0.jar"]
