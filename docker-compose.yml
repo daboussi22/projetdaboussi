@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  mysqldb:
+    image: mysql:5.7
+    restart: always
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=true
+      - MYSQL_DATABASE=db
+    ports:
+      - 3306:3306
+    network_mode: "host"  # Use host networking
+
+  app:
+    depends_on:
+      - mysqldb
+    build: ./
+    restart: always
+    ports:
+      - 8092:8092
+    volumes:
+      - .m2:/root/.m2
+    stdin_open: true
+    tty: true
+    environment:
+      - MYSQL_HOST=localhost  # Use localhost because we're using host networking
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=db
+      - MYSQL_USER=root  # Or set a specific user if you have one
+      - MYSQL_PASSWORD=   # Set a password here if needed
+    network_mode: "host"  # Use host networking
