@@ -31,12 +31,12 @@ public class UserRestControl {
 		return userService.retrieveUser(userId);
 	}
 	
-	 
 
-	// Ajouter User : http://localhost:????/timesheet-devops/add-user 
+
+
 	@PostMapping("/add-user")
 	public User addUser(@RequestBody User u) {
-		User user = userService.addUser(u); 
+		User user = userService.addUser(u);
 		return user;
 	}
 
