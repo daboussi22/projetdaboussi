@@ -101,6 +101,7 @@ pipeline {
                 }
             }
         }
+        ...
 
         stage('Docker Compose Up') {
             steps {
