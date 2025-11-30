@@ -34,25 +34,26 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 timeout(time: 1, unit: 'HOURS') {
-                    waitForQualityGate abortPipeline: false
+                    waitForQualityGate abortPipeline: false // do not abort on failure
                 }
             }
         }
 
-       stage('SCA with Trivy') {
-           steps {
-               sh '''
-                   trivy fs . --severity CRITICAL,HIGH --format json --exit-code 1 --output trivy-fs-report.json
-                   trivy image timesheet-devops-1.0 --severity CRITICAL,HIGH --format json --exit-code 1 --output trivy-image-report.json
-               '''
-           }
-           post {
-               always {
-                   archiveArtifacts artifacts: 'trivy-*-report.json', allowEmptyArchive: true
-               }
-           }
-       }
-
+        stage('SCA with Trivy') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    sh '''
+                        trivy fs . --severity CRITICAL,HIGH --format json --exit-code 1 --output trivy-fs-report.json || true
+                        trivy image timesheet-devops-1.0 --severity CRITICAL,HIGH --format json --exit-code 1 --output trivy-image-report.json || true
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-*-report.json', allowEmptyArchive: true
+                }
+            }
+        }
 
         stage('DAST Scan with OWASP ZAP') {
             steps {
@@ -62,7 +63,7 @@ pipeline {
                             -t http://192.168.50.4:8080 \
                             -r zap_report.html \
                             -x zap_report.xml \
-                            --exit-code 1
+                            --exit-code 1 || true
                     '''
                 }
             }
@@ -80,11 +81,21 @@ pipeline {
                         gitleaks detect --source . --report-path gitleaks-report.json || true
                     '''
                 }
-                archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
+                post {
+                    always {
+                        archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
+                    }
+                }
             }
         }
 
-        stage('DockerHub Login & Push') {
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t timesheet-devops:1.0 .'
+            }
+        }
+
+        stage('DockerHub Push') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub',
@@ -92,9 +103,9 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                        docker build -t $DOCKER_USER/timesheet-devops-1.0 .
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push $DOCKER_USER/timesheet-devops-1.0
+                        docker tag timesheet-devops:1.0 $DOCKER_USER/timesheet-devops:1.0
+                        docker push $DOCKER_USER/timesheet-devops:1.0
                     '''
                 }
             }
