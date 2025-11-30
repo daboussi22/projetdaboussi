@@ -39,21 +39,19 @@ pipeline {
             }
         }
 
-        stage('SCA with Trivy') {
-            steps {
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    sh '''
-                        trivy fs . --severity CRITICAL,HIGH --format json --output trivy-fs-report.json || true
-                        trivy image timesheet-devops-1.0 --severity CRITICAL,HIGH --format json --output trivy-image-report.json || true
-                    '''
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'trivy-*-report.json', allowEmptyArchive: true
-                }
-            }
-        }
+       stage('SCA with Trivy') {
+           steps {
+               sh '''
+                   trivy fs . --severity CRITICAL,HIGH --format json --exit-code 1 --output trivy-fs-report.json
+                   trivy image timesheet-devops-1.0 --severity CRITICAL,HIGH --format json --exit-code 1 --output trivy-image-report.json
+               '''
+           }
+           post {
+               always {
+                   archiveArtifacts artifacts: 'trivy-*-report.json', allowEmptyArchive: true
+               }
+           }
+       }
 
 
         stage('DAST Scan with OWASP ZAP') {
